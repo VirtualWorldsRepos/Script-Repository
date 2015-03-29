@@ -1,0 +1,30 @@
+$module()
+
+integer TRACE = 0;
+integer DEBUG = 1;
+integer INFO = 2;
+integer WARNING = 3;
+integer ERROR = 4;
+integer NONE = 99;
+
+integer DEBUG_LEVEL = TRACE;
+////////////////////
+debug(integer level, string text)
+{
+    if(level >= DEBUG_LEVEL) llOwnerSay("[" + llGetScriptName() + "]" + get_level_text(level) + " " + text);
+}
+
+////////////////////
+debugl(integer level, list lines) {
+	debug(level, llDumpList2String(lines, "\n\t"));
+}
+
+string get_level_text(integer level) {
+	if(level == TRACE) return "[trace]";
+	if(level == DEBUG) return "[debug]";
+	if(level == INFO) return "[info]";
+	if(level == WARNING) return "[warning]";
+	if(level == ERROR) return "[error]";
+	
+	return "";
+}

@@ -1,0 +1,24 @@
+$module()
+
+//==============================================================================
+//Manager Core Constants
+//==============================================================================
+string VAR_CLEAN_WARNING = "WARNING: Cleaning will make these objects delete from the region.  They do NOT go back into inventory.\n\nClean?";
+string VAR_FINISH_WARNING = "WARNING: Pressing Finish will freeze these items into position and remove the Builder\'s Buddy scripts.  You will have to move/delete them manually after this point.\n\nFinish?";
+
+//==============================================================================
+//Manager Constants
+//==============================================================================
+string VAR_ALLOW_CLEAN = "allow_clean";
+string VAR_ALLOW_GROUP = "allow_group";
+string VAR_ALLOW_FORGET = "allow_forget";
+string VAR_ALLOW_RECORD = "allow_record";
+string VAR_CONFIRM_CLEAN = "confirm_clean";
+string VAR_CONFIRM_FINISH = "confirm_finish";
+string VAR_CREATORS = "creators";
+string VAR_DELETE_ON_REZ = "delete_on_rez";
+string VAR_EVENT_TIMEOUT = "event_timeout";
+string VAR_FULL_RIGHTS = "full_rights";
+string VAR_MENU_LISTEN_TIME = "menu_listen";
+string VAR_MENU_ON_TOUCH = "menu_on_touch";
+string VAR_SAFE_CLEAN = "safe_clean";

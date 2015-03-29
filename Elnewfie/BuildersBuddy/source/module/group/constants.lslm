@@ -1,0 +1,8 @@
+$module()
+
+//==============================================================================
+//Group Rezzer Constants
+//==============================================================================
+string VAR_REMOVE_TAG = "group_remove_tag";
+string VAR_PREFIX = "group_prefix";
+string VAR_POSTFIX = "group_postfix";

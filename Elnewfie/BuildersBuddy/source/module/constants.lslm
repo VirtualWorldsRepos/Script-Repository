@@ -1,0 +1,13 @@
+$module()
+
+//==============================================================================
+//Menu Constants
+//==============================================================================
+string MENU_TYPE_ADMIN = "A";
+string MENU_TYPE_EVERYONE = "E";
+string MENU_TYPE_NONE = "X";
+string VAR_MOD_EVENTS = "mod_events";
+string VAR_MOD_MENU_DESC = "mod_menu_desc";
+string VAR_MOD_MENU_TYPE = "mod_menu_type";
+string VAR_MOD_NAME = "mod_name";
+string VAR_MOD_TYPE = "mod_type";

@@ -1,0 +1,113 @@
+$module()
+
+$import common.comm.core.lslm;
+$import common.constants.lslm;
+$import common.log.lslm;
+$import storage.core.lslm;
+$import common.util.lslm;
+$import module.constants.lslm;
+
+//==============================================================================
+//Module Core Variables
+//==============================================================================
+string module = "";
+
+//==============================================================================
+//Manager Core Functions
+//==============================================================================
+
+////////////////////
+check_name()
+{
+	module = get_short_name(llGetScriptName());
+	
+	//Remove any pipe symbols that may appear
+    module = llDumpList2String(llParseStringKeepNulls(module, ["|"], []), "");
+    
+	debugl(TRACE, ["mod_check_name():", "Module: " + llGetScriptName() + ", short name: " + module + ", length: " + (string)llStringLength(module)]);
+}
+
+////////////////////
+integer handle_message()
+{
+	debugl(TRACE, ["module.core.handle_message()", msg_module, msg_command] + msg_details);
+	
+	if(msg_module == MANAGER) {
+		if(msg_command == "reset") {
+			llResetScript();
+			return TRUE;
+		}
+		
+		if(msg_command == "register") {
+			debug(DEBUG, "Registration received");
+			return TRUE;
+		}
+	}
+	
+	return FALSE;
+}
+
+////////////////////
+register(string module_type, string menu_type, list events, string label, string desc)
+{
+	menu_type = llToUpper(menu_type);
+	
+	if((menu_type != MENU_TYPE_ADMIN) && (menu_type != MENU_TYPE_EVERYONE) && (menu_type != MENU_TYPE_NONE)) {
+		llOwnerSay("mod_register: Invalid menu type specified, please check script.");
+		return;
+	}
+	
+	//P = Parent, C = Component
+	if((module_type != TYPE_PARENT) && (module_type != TYPE_CHILD)) {
+		llOwnerSay("mod_register: Invalid module type specified, please check script.");
+		return;
+	}
+		
+	list details = [
+		llGetScriptName(),
+		module_type,
+		menu_type,
+		llDumpList2String(events, ","),
+		label,
+		desc
+	];
+	send_manager("register", details);
+}
+
+////////////////////
+register_quick() {
+	string modType = get(VAR_MOD_TYPE, TYPE_CHILD);
+	string modName = get(VAR_MOD_NAME, "SET_MOD_NAME");
+	string menuDesc = get(VAR_MOD_MENU_DESC, "(No description)");
+	string menuType = get(VAR_MOD_MENU_TYPE, MENU_TYPE_NONE);
+	list modEvents = get_list(VAR_MOD_EVENTS, []);
+	
+	register(modType, menuType, modEvents, modName, menuDesc);
+}
+
+////////////////////
+send_manager(string command, list details) {
+	send(module, MANAGER, command, details);
+}
+
+
+////////////////////
+mod_changed(integer change) {
+	if(change & CHANGED_INVENTORY) check_name();
+}
+
+
+////////////////////
+integer mod_link_message(integer sender_number, integer number, string message, key id)
+{
+	return parse([module, ALL_MODULES], number, message, id);
+}
+
+////////////////////
+mod_state_entry() {
+	debug(DEBUG, "====================");
+	debug(DEBUG, "   SCRIPT STARTED   ");
+	debug(DEBUG, "====================");
+	check_name();
+	register_quick();	
+}

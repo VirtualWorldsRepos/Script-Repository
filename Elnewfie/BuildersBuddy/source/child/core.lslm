@@ -1,0 +1,110 @@
+$module()
+
+$import common.comm.core.lslm;
+$import common.log.lslm;
+$import storage.core.lslm;
+$import child.constants.lslm;
+
+//==============================================================================
+//Child Core variables
+//==============================================================================
+integer parent_channel = 0;
+integer parent_handle = 0;
+integer base_channel = 0;
+integer base_handle = 0;
+integer listen_channel;
+string listen_base;
+string listen_command;
+list listen_details;
+string listen_id;
+string listen_name;
+integer listen_password;
+string listen_target;
+
+//==============================================================================
+//Child Core Functions
+//==============================================================================
+
+////////////////////
+integer parse_listen(integer channel, string name, key id, string message)
+{
+	listen_channel = channel;
+	list parts = llParseStringKeepNulls(message, ["|"], []);
+	
+	if(llGetListLength(parts) < 3) return FALSE;
+	
+	
+	//Yes, for us
+	listen_base = llList2String(parts, 0);
+	listen_target = llList2String(parts, 1);
+	listen_command = llList2String(parts, 2);
+	
+	if(llGetListLength(parts) > 3)
+		listen_details = llList2List(parts, 3, -1);
+	else
+		listen_details = [];
+		
+	debugl(DEBUG, ["child.core.parse_listen()", "listen_base: " + listen_base, "lisen_target: " + listen_target, "listen_command: " + listen_command, "listen_details: " + llDumpList2String(listen_details, "|")]);
+		
+	return TRUE;
+}
+
+////////////////////
+send_module(string dest_module, string command, list details, integer force)
+{
+	send(MANAGER, dest_module, command, details);
+}
+
+////////////////////
+start_listening()
+{
+	list channels = [];
+	base_channel = (integer)get(VAR_CHANNEL, "-192567");
+
+	//No currently active listener?
+	if(base_handle == 0) {
+		//Grab the channel
+		if(base_channel < 0) {
+			//Activate listener
+			debug(DEBUG, "Starting listening on base channel " + (string)base_channel);
+			base_handle = llListen(base_channel, "", NULL_KEY, "");
+			channels += [base_channel];			
+		}
+	}
+	
+	if(parent_handle == 0) {
+		//Do we have a parent channel that is different from the base channel?
+		if((parent_channel < 0) && (parent_channel != base_channel)) {
+			debug(DEBUG, "Starting listening on parent channel " + (string)parent_channel);
+			parent_handle = llListen(parent_channel, "", NULL_KEY, "");
+			channels += [parent_channel];
+		}
+	}
+
+	if(llGetListLength(channels) > 0) {	
+		send_module(ALL_MODULES, "listen_start", channels, FALSE);
+	}
+}
+
+////////////////////
+stop_listening()
+{
+	list channels = [];
+	
+	//Have an active listener?
+	if(base_handle != 0) {
+		llListenRemove(base_handle);
+		base_handle = 0;
+		channels += [base_channel];
+	}
+	
+	if(parent_handle != 0) {
+		llListenRemove(parent_handle);
+		parent_handle = 0;
+		channels += [parent_channel];
+	}
+	
+	if(llGetListLength(channels) > 0) {
+		send_module(ALL_MODULES, "listen_stop", channels, FALSE);
+	}
+}

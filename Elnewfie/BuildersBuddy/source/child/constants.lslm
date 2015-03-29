@@ -1,0 +1,32 @@
+$module()
+
+//==============================================================================
+//Child Base Constants
+//==============================================================================
+string VAR_BASE_ID = "base_id";
+string VAR_CHANNEL = "channel";
+string VAR_GLOW_ON_IDENTIFY = "glow_on_identify";
+string VAR_GLOW_TIMEOUT = "glow_timeout";
+string VAR_MAX_X = "max_x";
+string VAR_MAX_Y = "max_y";
+string VAR_MAX_Z = "max_z";
+string VAR_MOVE_ON_REZ = "move_on_rez";
+string VAR_REPARENT_DELAY = "reparent_delay";
+string VAR_TIMER_DELAY = "timer_delay";
+string VAR_YELL_DELAY = "yell_delay";
+string VAR_YELL_TIMEOUT = "yell_timeout";
+string VAR_MOVE_SAFE = "move_safe";
+string VAR_SAY_ON_IDENTIFY = "say_on_identify";
+
+//==============================================================================
+//Child Base Defaults
+//==============================================================================
+string VAR_CHANNEL_DEFAULT = "-1000001";
+string VAR_GLOW_TIMEOUT_DEFAULT = "10";
+string VAR_REPARENT_DELAY_DEFAULT = "15";
+string VAR_TIMER_DELAY_DEFAULT = "0.5";
+string VAR_YELL_DELAY_DEFAULT = "1.0";
+string VAR_YELL_TIMEOUT_DEFAULT = "30";
+string VAR_MAX_X_DEFAULT = "256.0";
+string VAR_MAX_Y_DEFAULT = "256.0";
+string VAR_MAX_Z_DEFAULT = "4096.0";

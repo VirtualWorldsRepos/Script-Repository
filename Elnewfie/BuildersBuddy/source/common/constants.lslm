@@ -1,0 +1,15 @@
+$module ()
+
+//==============================================================================
+//General Constants
+//==============================================================================
+string ALL_CHILDREN = "all";
+string ALL_MODULES = "all";
+string BASE = "base";
+integer BB_API = -11235813;
+integer BB_API_REPLY = -11235814;
+string BB_VERSION = "3.0"; 
+string MANAGER = "manager";
+string MODULE = "module";
+string TYPE_CHILD = "C";
+string TYPE_PARENT = "P";

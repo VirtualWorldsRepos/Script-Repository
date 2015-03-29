@@ -1,0 +1,12 @@
+$module()
+
+//==============================================================================
+//Base core variables
+//==============================================================================
+integer base_channel;
+integer base_handle;
+integer child_channel;
+integer child_handle;
+string listen_base;
+integer listen_channel;
+key listen_source = NULL_KEY;

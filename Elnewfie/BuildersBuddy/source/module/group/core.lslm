@@ -1,0 +1,63 @@
+$module()
+$import common.log.lslm;
+$import module.group.constants.lslm;
+
+//==============================================================================
+//Group Rezzer Core Functions
+//==============================================================================
+
+////////////////////
+list get_group_names(string text, string prefix, string postfix)
+{
+	integer end = 0;
+	integer start = 1;
+	
+	//Do we have the prefix at the beginning?
+	if(llGetSubString(text, 0, 0) == prefix) {
+		//Do we have a subsequent postfix?
+		end = llSubStringIndex(text, postfix);
+		if(end == -1) return [];	//No match
+	
+	} else {
+		return [];		//No group name
+	}
+	
+	//Group name must be the text in between
+	list groups = llParseStringKeepNulls(llGetSubString(text, start, end - 1), [","], []);
+	return groups;
+}
+
+////////////////////
+integer is_group_match(string prefix, string group, string postfix, string name)
+{
+	
+	list group_names = get_group_names(name, prefix, postfix);
+	debug(DEBUG, "Groups: " + llDumpList2String(group_names, ", "));
+	integer i;
+	integer group_count = llGetListLength(group_names);
+	for(i = 0; i < group_count; i++) {
+		if(group == llList2String(group_names, i)) return TRUE;
+	}
+	
+	//If we got here, no match
+	return FALSE;
+}
+
+////////////////////
+string get_base_name(string prefix, string postfix, string name) {
+	integer end = 0;
+	integer start = 1;
+	
+	//Do we have the prefix at the beginning?
+	if(llGetSubString(name, 0, 0) == prefix) {
+		//Do we have a subsequent postfix?
+		end = llSubStringIndex(name, postfix);
+		if(end == -1) return name;	//No match
+	
+	} else {
+		return name;		//Use full name
+	}
+	
+	//Base name is everything past the postfix
+	return llGetSubString(name, end + 1, -1);
+}

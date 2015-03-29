@@ -1,0 +1,34 @@
+<project name="Builders Buddy 3" default="build" basedir=".">
+	<property name="dest" location="_build" />
+	<selector id="modules">
+		<filename name="*.lslm"/>
+	</selector>
+	
+	<!-- Remove any pre-existing files -->
+	<target name="clean">
+		<delete dir="${dest}" file="*" />
+	</target>
+	
+	<!-- Populate build folder with copies of the scripts -->
+	<target name="copy" depends="clean">
+		<copy todir="${dest}">
+			<fileset file="*.lslp" dir="parent" />
+			<fileset file="*.lslp" dir="parent/modules" />
+			<fileset file="*.lslp" dir="child" />
+			<fileset file="*.lslp" dir="child/modules" />
+		</copy>
+	</target>
+	
+	<target name="build" depends="copy">
+		<property name="lslm.file" value="child/constants.lslm" />
+		<antcall target="apply-module" />
+		
+		<property name="lslm.file" value="common/comm.lslm" />
+		<antcall target="apply-module" />
+
+	</target>
+	
+	<target name="apply-module">
+		<echo message="${lslm.file}" />
+	</target>
+</project>

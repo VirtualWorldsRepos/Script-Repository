@@ -1,0 +1,16 @@
+$module()
+
+//==============================================================================
+//Constants - Base Functionality
+//==============================================================================
+string VAR_ALLOW_GROUP = "allow_group";
+string VAR_BASE_ID = "base_id";
+string VAR_BEACON_DELAY = "beacon_delay";
+string VAR_BULK_BUILD = "bulk_build";
+string VAR_CHANNEL = "channel";
+string VAR_CLEAN_BEFORE_REZ = "clean_before_rez";
+string VAR_DIE_ON_CLEAN = "die_on_clean";
+string VAR_RANDOMIZE_CHANNEL = "randomize_channel";
+string VAR_REZ_TIMEOUT = "rez_timeout";
+string VAR_TIMER_DELAY = "timer_delay";
+string VAR_USE_BEACON = "use_beacon";

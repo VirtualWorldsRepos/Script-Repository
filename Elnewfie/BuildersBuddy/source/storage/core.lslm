@@ -1,0 +1,56 @@
+$module()
+$import storage.vars.lslm;
+
+//==============================================================================
+//Storage Functions
+//==============================================================================
+
+////////////////////
+string get(string name, string default_value)
+{
+    integer iFound = llListFindList(vars, [ name ]);
+    if(iFound != -1)
+        return llList2String(values, iFound);
+    
+    return default_value;
+}
+
+////////////////////
+list get_list(string varName, list default_list)
+{
+    integer iFound = llListFindList(vars, [ varName ]);
+    if(iFound != -1) {
+        return llParseStringKeepNulls(llList2String(values, iFound), ["|"],  [""]);
+    }
+    
+    return default_list;
+}
+
+////////////////////
+integer is_yes(string var, string default_value) {
+	return (llToUpper(get(var, default_value)) == "Y");
+}
+
+////////////////////
+set(string name, string value)
+{
+    //Make the var lowercase
+    name = llToLower(name);
+    
+    //See if we have a var by this name already
+    integer iFound = llListFindList(vars, [name]);
+    if(iFound != -1) {
+        //Replace the existing entry
+        values = llListReplaceList(values, [value], iFound, iFound);
+    } else {
+        //Add it
+        vars += name;
+        values += value;
+    }
+}
+
+////////////////////
+set_list(string name, list values)
+{
+	set(name, llDumpList2String(values, "|"));
+}

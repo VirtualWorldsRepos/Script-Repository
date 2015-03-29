@@ -1,0 +1,50 @@
+$module()
+
+$import common.comm.vars.lslm;
+$import common.constants.lslm;
+$import common.log.lslm;
+
+//==============================================================================
+//Communication functions
+//==============================================================================
+
+// message: <source>|<target>|<command>
+// id: <details...>
+////////////////////
+integer parse(list targets, integer number, string message, string id) {
+		if(number != BB_API) return FALSE;
+		
+		list parts = llParseStringKeepNulls((string)id, ["|"], []);
+		if(llGetListLength(parts) != 3) return FALSE;
+		
+		//Check the list of targets and see if it's for one of the ones we're listening for
+		integer num_targets = llGetListLength(targets);
+		integer i;
+		string target = llList2String(parts, 1);
+		for(i = 0; i < num_targets; i++) {
+			if(llList2String(targets, i) == target) {
+				//It's good
+				msg_module = llList2String(parts, 0);
+				msg_command = llList2String(parts, 2);
+				msg_details = llParseStringKeepNulls(message, ["|"], []);
+				debugl(TRACE, ["common.comm.parse():", msg_module, msg_command, message]);
+				
+				return TRUE;
+			}
+		}
+		
+		return FALSE;
+}
+
+////////////////////
+send(string source, string dest, string command, list details)
+{
+	debugl(TRACE, ["common.common.send():", "dest: " + dest, "command: " + command, "details: " + llDumpList2String(details, "|")]);
+	
+    llMessageLinked(
+    	LINK_THIS,
+    	BB_API, 
+    	llDumpList2String(details, "|"),
+    	llDumpList2String([source, dest, command], "|")
+    );
+}

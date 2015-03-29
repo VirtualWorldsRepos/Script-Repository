@@ -1,0 +1,95 @@
+$module()
+$import common.comm.core.lslm;
+$import common.log.lslm;
+$import storage.core.lslm;
+$import base.constants.lslm;
+$import base.vars.lslm;
+
+//==============================================================================
+//Base core functions
+//==============================================================================
+
+////////////////////
+string generate_base_id()
+{
+	//Nothing complex here, just make a unique id
+	// by combining out UUID, timestamp and MD5'ing it
+	string seed = (string)llGetKey() + (string)llGetUnixTime();
+	return llMD5String(seed, 100);
+}
+
+////////////////////
+integer parse_listen(integer channel, string name, key id, string message)
+{
+	debugl(TRACE, ["base.core.parse_listen()", "channel: " + (string)channel, "name: " + name, "id: " + (string)id, "message: " + message]);
+	
+	listen_channel = channel;
+	list parts = llParseStringKeepNulls(message, ["|"], []);
+	
+	//See if for us
+	if(llGetListLength(parts) < 2) return FALSE;
+	string target_base = llList2String(parts, 0);
+	if((target_base != BASE) && (target_base != (string)llGetKey())) return FALSE;
+	
+	listen_base = target_base;
+	msg_command = llList2String(parts, 1);
+	
+	msg_details = [];
+	if(llGetListLength(parts) > 2)
+		msg_details = llList2List(parts, 2, -1);
+		
+	return TRUE;
+}
+
+////////////////////
+request_event(string event_name, list details) {
+	send_manager("request_event", [event_name] + details);
+}
+
+////////////////////
+send_child(string child, string command, list details)
+{
+	integer channel;
+	if(child_channel != 0) {
+		channel = child_channel;
+	} else {
+		channel = base_channel;
+	}
+	
+	if(channel == 0) {
+		debug(ERROR, "Cannot send message on channel 0");
+		return;
+	}
+
+	debug(TRACE, "Sending message to " + child + " on channel " + (string)channel);
+	send_child_channel(child, channel, command, details);	
+}
+
+////////////////////
+send_child_channel(string child, integer channel, string command, list details) {
+	string text = llDumpList2String(
+		[get(VAR_BASE_ID, ""), child, command] + details, 
+		"|"
+	);
+	
+	if(child == ALL_CHILDREN) {
+		//Use general broadcast
+		llRegionSay(
+			channel, 
+			text
+		);
+	} else {
+		//Send to just the child object
+		llRegionSayTo(
+			(key)child, 
+			channel, 
+			text
+		);
+	}
+} 
+
+////////////////////
+send_manager(string command, list details)
+{
+	send(BASE, MANAGER, command, details);
+}
