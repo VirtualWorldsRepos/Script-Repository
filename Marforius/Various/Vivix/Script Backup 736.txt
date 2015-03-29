@@ -1,0 +1,24 @@
+//returns 1 prim in a linkset with name in
+integer findprim(string in)
+{
+    integer x;
+    for(x=2;x<=llGetNumberOfPrims();x++)
+    {
+        if(llGetLinkName(x)==in)
+        return x;
+    }
+    return 257;
+}
+
+default
+{
+    state_entry()
+    {
+        llListen(899999,"","","");
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        llOwnerSay("Applying " + m + " to texture layer.");
+        llSetLinkPrimitiveParamsFast(findprim("texture_layer"),[PRIM_TEXTURE,-1,m,<.55,.55,0>,<-.25,.25,0>,0,PRIM_COLOR,-1,<1,1,1>,1.0]);
+    }
+}

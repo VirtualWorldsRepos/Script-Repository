@@ -1,0 +1,19 @@
+integer rez;
+
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(.1);
+    }
+    
+    timer()
+    {
+        integer info = llGetAgentInfo(llGetOwner());
+        if( (info & AGENT_WALKING) == AGENT_WALKING)
+        {
+            rez = (rez + 1) % 12;
+            llRezAtRoot(llGetInventoryName(INVENTORY_OBJECT,0),llGetPos(),llGetVel(),llGetRot(),rez+1);
+        }
+    }
+}

@@ -1,0 +1,228 @@
+//PONY FALLOUT MONEY PILE
+string name = "Money!";
+
+integer cashout;
+integer cashing_out;
+integer withdrawal;
+integer unix_cashout;
+
+list hash()
+{
+    integer rand = llRound(llFrand(99999)) + 99999;
+    
+    while(~llListFindList(recent_randout,[rand]))
+    rand = llRound(llFrand(99999)) + 99999;
+    
+    recent_randout += [rand,45];
+    
+    integer unix = llGetUnixTime();
+    string keyhash = llMD5String( (string)llGetOwner() + (string)rand + (string)unix,rand+unix+1337);
+    return [keyhash,rand,unix];
+}
+
+encode_message(string target_id, list params_out)
+{
+    if(target_id == NULL_KEY)
+    llRegionSay(chan(target_id),llDumpList2String(params_out + hash(),"|"));
+    else
+    llRegionSayTo(target_id,chan(llGetOwnerKey(target_id)),llDumpList2String(params_out + hash(),"|"));
+}
+
+list recent_randout;
+list recent_hashtags;
+hashprocess()
+{
+    integer x;
+    for(x=0;x<llGetListLength(recent_hashtags);x+=2)
+    {
+        integer entry = llList2Integer(recent_hashtags,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_hashtags = llDeleteSubList(recent_hashtags,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_hashtags = llListReplaceList(recent_hashtags,[entry],x+1,x+1);
+        }
+    }
+    for(x=0;x<llGetListLength(recent_randout);x+=2)
+    {
+        integer entry = llList2Integer(recent_randout,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_randout = llDeleteSubList(recent_randout,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_randout = llListReplaceList(recent_randout,[entry],x+1,x+1);
+        }
+    }
+}
+
+process_message(string m, string id)
+{
+    list p = llParseString2List(m,["|"],[]);
+    string keyhash = llList2String(p,-3);
+    //does the hash match
+    if(keyhash == llMD5String( (string)llGetOwnerKey(id) + llList2String(p,-2) + llList2String(p,-1),llList2Integer(p,-2) + llList2Integer(p,-1) + 1337))
+    {
+        //was the message sent in the last 30 seconds
+        if((llGetUnixTime() - llList2Integer(p,-1)) < 30)
+        {
+            //have we already received this exact message (we will never encode the same hash twice from an object, which means this only happens if people are spoofing messages)
+            if(~llListFindList(recent_hashtags,[keyhash]))
+            return;
+            else recent_hashtags += [keyhash,45];//45 seconds to message deprecator to ensure no 30sec windows ever get hit perfect
+        }
+        else return;
+    }
+    else return;
+    
+    //ok so now that we've filtered out the bullshit, let's do some stuff
+    integer x;
+    while(x < (llGetListLength(p) - 3))
+    {
+        string cmd = llList2String(p,x);
+        if(cmd=="CashOut")
+        {
+            cashing_out = 0;
+            encode_message(llGetOwner(),["AddMoney",cashout]);
+            cashout = 0;
+            x++;
+        }
+        else if(cmd=="MoneyAction")
+        {
+            string reply = llList2String(p,x+1);
+            if(reply=="Cash Out")
+            {
+                if(!cashing_out)
+                {
+                    encode_message(llGetOwner(),["PleaseRespond","CashOut"]);
+                    llOwnerSay("Cashing out " + (string)cashout + " bottlecaps!");
+                    cashing_out = 1;
+                    unix_cashout = llGetUnixTime();
+                }
+                else
+                llOwnerSay("You're already cashing out! Please wait 60 seconds before trying again.");
+            }
+            else if(reply=="Deposit")
+            {
+                encode_message(id,["RequestMoneyAmount"]);
+            }
+            else if(reply=="Withdraw")
+            {
+                encode_message(id,["DialogCallback","WithdrawCaps","How many bottlecaps would you like to withdraw? (" + (string)cashout + " stored)","!INPUTBOX"]);
+            }
+            else if(reply=="Rename")
+            {
+                encode_message(id,["DialogCallback","SetName","Rename this object:","!INPUTBOX"]);
+            }
+            x+=2;
+        }
+        else if(cmd=="MoneyAmount")
+        {
+            integer caps = llList2Integer(p,x+1);
+            encode_message(id,["DialogCallback","DepositCaps","How many bottlecaps would you like to deposit? (You have " + (string)caps + " caps available)","!INPUTBOX"]);
+            x+=2;
+        }
+        else if(cmd=="SetName")
+        {
+            name = llList2String(p,x+1);
+            x+=2;
+        }
+        else if(cmd=="DepositCaps")
+        {
+            integer total = llList2Integer(p,x+1);
+            if(total>0)
+            encode_message(id,["SpendMoney",total]);
+            x+=2;
+        }
+        else if(cmd=="SpendingMoney")
+        {
+            llSay(0,"Received " + llList2String(p,x+1) + " bottlecaps! Wow!");
+            cashout += llList2Integer(p,x+1);
+            x+=2;
+        }
+        else if(cmd=="NotEnoughMoney")
+        {
+            llSay(0,"Not sure what went wrong, but you don't seem to have that many caps to deposit!");
+            x++;
+        }
+        else if(cmd=="WithdrawCaps")
+        {
+            if(!cashing_out)
+            {
+                withdrawal = llList2Integer(p,x+1);
+                if(withdrawal > cashout)
+                withdrawal = cashout;
+
+                encode_message(llGetOwner(),["PleaseRespond","WithdrawConfirmation"]);
+                llOwnerSay("Withdrawing " + (string)withdrawal + " bottlecaps!");
+                cashing_out = 1;
+                unix_cashout = llGetUnixTime();
+            }
+            else
+            llOwnerSay("You're already withdrawing caps. Please wait 60 seconds before trying again.");
+            x+=2;
+        }
+        else if(cmd=="WithdrawConfirmation")
+        {
+            cashout -= withdrawal;
+            cashing_out = 0;
+            encode_message(llGetOwner(),["AddMoney",withdrawal]);
+            x++;
+        }
+        else x++;
+    }
+}
+
+integer chan(string id)
+{
+    return (integer)("0x" + llGetSubString(id,0,4)) - 9000000;
+}
+
+integer listener;
+newlisten()
+{
+    llListenRemove(listener);
+    listener = llListen(chan(llGetOwner()),"","","");
+}
+
+default
+{
+    state_entry()
+    {
+        llSetText("Click to adjust bottlecap value.",<1,0,0>,1);
+        newlisten();
+        llSetTimerEvent(1);
+    }
+    timer()
+    {
+        hashprocess();
+        if(llGetUnixTime() - unix_cashout > 60)
+        {
+            if(cashing_out)
+            {
+                cashing_out = 0;
+            }
+        }
+        llSetObjectName(name + " [" + (string)cashout + "]");
+        llSetText("This is a money storage object.\nCurrently Worth: " + (string)cashout + " caps",<1,1,1>,1);
+    }
+    touch_start(integer n)
+    {
+        while(~--n)
+        {
+            if(llDetectedKey(n)==llGetOwner())
+            encode_message(llGetOwner(),["DialogCallback","MoneyAction","Would you like to deposit bottlecaps, withdraw bottlecaps, or cash out all bottlecaps?","Deposit\\bWithdraw\\bCash Out"]);
+        }
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        process_message(m,i);
+    }
+}

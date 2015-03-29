@@ -1,0 +1,86 @@
+//list of uuids that have touched our example box
+list targets;
+
+//returns the position of any object or avatar anywhere in the same sim, zero vector if not in sim
+vector getpos(key i)
+{return llList2Vector(llGetObjectDetails(i,[3]),0);}
+
+default
+{
+    state_entry()
+    {
+        //listen on channel 25 for any name, key, or message
+        llListen(25,"","","");
+        //timer to remove entries that go wrong
+        llSetTimerEvent(1);
+    }
+    
+    touch_start(integer n)
+    {
+        //handle all touches - i can explain this if you want
+        while(~--n)
+        {
+            //ALWAYS USE STRINGS IN LISTS, NEVER KEYS
+            //add to list of people we need to send splashies to
+            targets += [(string)llDetectedKey(n),30];
+            
+            //rez the actual splash object
+            llRezAtRoot("Example Rez",llGetPos()+<0,0,1>,llGetVel(),llGetRot(),1);
+        }
+    }
+    
+    //if for some reason we cant rez a splash, we need to get rid of targets in queue eventually so they dont eat up memory and make us die
+    timer()
+    {
+        //go through all targets entries
+        integer x;
+        for(x=0;x<llGetListLength(targets);x+=2)
+        {
+            //figure out how many seconds they have left
+            integer time_remaining = llList2Integer(targets,x+1);
+            //take one away
+            time_remaining--;
+            
+            //are you dead?
+            
+            //yes
+            if(time_remaining <= 0)
+            {
+                //delete from targets list
+                targets = llDeleteSubList(targets,x,x+1);
+                //move backwards because we're moving forwards
+                x-=2;
+            }
+            //not dead, update remaining time
+            else
+            targets = llListReplaceList(targets,[time_remaining],x+1,x+1);
+        }
+    }
+    
+    listen(integer c, string n, key i, string m)
+    {
+        //filters out all objects not owned by owner, while allowing owner to send messages too (agents own themselves)
+        if(llGetOwnerKey(i)!=llGetOwner())
+        return;
+        
+        //got a message from our splash object saying its ready for a destination
+        if(m=="SuccessfulRez")
+        {
+            //if we dont have any targets left, something is wrong, tell it to die
+            if(llGetListLength(targets)==0)
+            {
+                llRegionSayTo(i,26,"AbortMission");
+                return;
+            }
+            
+            //otherwise, get target pos for first queued avatar
+            vector targetpos = getpos(llList2String(targets,0));
+            
+            //then delete them from the queue (along with their timeout integer)
+            targets = llDeleteSubList(targets,0,1);
+            
+            //then send their target info to the splash
+            llRegionSayTo(i,26,(string)targetpos);
+        }
+    }
+}

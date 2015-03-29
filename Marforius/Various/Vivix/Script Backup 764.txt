@@ -1,0 +1,262 @@
+//PONY FALLOUT DEATH CLOCK
+integer food_decay_rate = 252;
+integer thirst_decay_rate = 180;
+integer heal_rate = 45;
+list clinic;
+integer clinic_stride = 3;
+list clinics_in_sim;
+
+clinicsweep()
+{
+    integer x = llGetListLength(clinics_in_sim);
+    while(~--x)
+    {
+        if(getpos(llList2String(clinics_in_sim,x))==ZERO_VECTOR)
+        clinics_in_sim = llDeleteSubList(clinics_in_sim,x,x);
+    }
+}
+
+integer in_a_clinic(string target)
+{
+    vector p = getpos(target);
+    integer x;
+    for(x=0;x<llGetListLength(clinics_in_sim);x++)
+    {
+        if(llVecDist(p,getpos(llList2String(clinics_in_sim,x)))<30)
+        {
+            llOwnerSay("Target is in a clinic: " + target);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+list hash()
+{
+    integer rand = llRound(llFrand(99999)) + 99999;
+    
+    while(~llListFindList(recent_randout,[rand]))
+    rand = llRound(llFrand(99999)) + 99999;
+    
+    recent_randout += [rand,45];
+    
+    integer unix = llGetUnixTime();
+    string keyhash = llMD5String( (string)llGetOwner() + (string)rand + (string)unix,rand+unix+1337);
+    return [keyhash,rand,unix];
+}
+
+encode_message(string target_id, list params_out)
+{
+    if(target_id == NULL_KEY)
+    llRegionSay(chan(target_id),llDumpList2String(params_out + hash(),"|"));
+    else
+    llRegionSayTo(target_id,chan(llGetOwnerKey(target_id)),llDumpList2String(params_out + hash(),"|"));
+}
+
+list recent_randout;
+list recent_hashtags;
+hashprocess()
+{
+    integer x;
+    for(x=0;x<llGetListLength(recent_hashtags);x+=2)
+    {
+        integer entry = llList2Integer(recent_hashtags,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_hashtags = llDeleteSubList(recent_hashtags,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_hashtags = llListReplaceList(recent_hashtags,[entry],x+1,x+1);
+        }
+    }
+    for(x=0;x<llGetListLength(recent_randout);x+=2)
+    {
+        integer entry = llList2Integer(recent_randout,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_randout = llDeleteSubList(recent_randout,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_randout = llListReplaceList(recent_randout,[entry],x+1,x+1);
+        }
+    }
+}
+
+process_message(string m, string id)
+{
+    list p = llParseString2List(m,["|"],[]);
+    string keyhash = llList2String(p,-3);
+    //does the hash match
+    if(keyhash == llMD5String( (string)llGetOwnerKey(id) + llList2String(p,-2) + llList2String(p,-1),llList2Integer(p,-2) + llList2Integer(p,-1) + 1337))
+    {
+        //was the message sent in the last 30 seconds
+        if((llGetUnixTime() - llList2Integer(p,-1)) < 30)
+        {
+            //have we already received this exact message (we will never encode the same hash twice from an object, which means this only happens if people are spoofing messages)
+            if(~llListFindList(recent_hashtags,[keyhash]))
+            return;
+            else recent_hashtags += [keyhash,45];//45 seconds to message deprecator to ensure no 30sec windows ever get hit perfect
+        }
+        else return;
+    }
+    else return;
+    
+    //ok so now that we've filtered out the bullshit, let's do some stuff
+    integer x;
+    while(x < (llGetListLength(p) - 3))
+    {
+        string cmd = llList2String(p,x);
+        if(cmd=="ChangedFullnessH-")
+        {
+            //confirmation of hunger fullness
+            x++;
+        }
+        else if(cmd=="ChangedFullnessT-")
+        {
+            //confirmation of thirst fullness
+            x++;
+        }
+        else if(cmd=="ClinicLocation")
+        {
+            if(!~llListFindList(clinics_in_sim,[id]))
+            {
+                clinics_in_sim += id;
+                encode_message(id,["RegisteredClinicSuccessfully"]);
+            }
+            x++;
+        }
+        else if(cmd=="AdmitToClinic")
+        {
+            string senderid = llGetOwnerKey(id);
+            integer index = llListFindList(clinic,[senderid]);
+            if(!~index)
+            {
+                clinic += [senderid,40,86400];
+                encode_message(senderid,["AdmittedToClinic"]);
+                llOwnerSay("Admitted avatar to clinic: " + senderid);
+            }
+            else encode_message(senderid,["AlreadyInClinic"]);
+            x++;
+        }
+        else if(cmd=="ClinicHealupReq")
+        {
+            string targ = llGetOwnerKey(id);
+            integer index = llListFindList(clinic,[targ]);
+            if(~index)
+            {
+                if(in_a_clinic(targ))
+                {
+                    //llOwnerSay("Healing target");
+                    encode_message(targ,["Add_Fullness_H","1","Add_Fullness_T","1"]);
+                
+                    integer heals = llList2Integer(clinic,index+1);
+                    heals--;
+                    if(heals>0)
+                    clinic = llListReplaceList(clinic,[heals],index+1,index+1);
+                    else
+                    clinic = llDeleteSubList(clinic,index,index+clinic_stride-1);
+                }
+                else clinic = llDeleteSubList(clinic,index,index+clinic_stride-1);
+            }
+            x++;
+        }
+        else x++;
+    }
+}
+
+integer chan(string id)
+{
+    return (integer)("0x" + llGetSubString(id,0,4)) - 9000000;
+}
+
+integer listener;
+integer syslisten;
+newlisten()
+{
+    llListenRemove(listener);
+    listener = llListen(chan(llGetOwner()),"","","");
+    llListenRemove(syslisten);
+    syslisten = llListen(chan(NULL_KEY),"","","");
+}
+
+integer ticks = -1;
+list agents;
+
+vector getpos(string i)
+{return llList2Vector(llGetObjectDetails(i,[3]),0);}
+
+default
+{
+    state_entry()
+    {
+        llSetText("This is a deathklok.",<0,1,0>,1);
+        newlisten();
+        llSetTimerEvent(1);
+        encode_message(NULL_KEY,["RequestClinic","ALL"]);
+    }
+    timer()
+    {
+        ticks++;
+        integer x;
+        string targ;
+        hashprocess();
+        if((ticks % 5) == 0)
+        agents = llGetAgentList(AGENT_LIST_REGION,[]);
+        if((ticks % food_decay_rate) == 0)
+        {
+            for(x=0;x<llGetListLength(agents);x++)
+            {
+                targ=llList2String(agents,x);
+                if(!~llListFindList(clinic,[targ]))
+                {
+                    vector fuck = getpos(targ);
+                    if(fuck.z<3000)
+                    encode_message(targ,["Subtract_Fullness_H",1]);
+                }
+            }
+        }
+        if((ticks % thirst_decay_rate) == 0)
+        {
+            for(x=0;x<llGetListLength(agents);x++)
+            {
+                targ=llList2String(agents,x);
+                if(!~llListFindList(clinic,[targ]))
+                {
+                    vector fuck = getpos(targ);
+                    if(fuck.z<3000)
+                    encode_message(targ,["Subtract_Fullness_T",1]);
+                }
+            }
+        }
+        if((ticks % heal_rate)==0)
+        {
+            encode_message(NULL_KEY,["RequestClinic","ALL"]);
+            integer x;
+            for(x=0;x<llGetListLength(clinic);x+=clinic_stride)
+            {
+                integer timeout = llList2Integer(clinic,x+2);
+                timeout--;
+                if(timeout <= 0)
+                {
+                    clinic = llDeleteSubList(clinic,x,x+clinic_stride-1);
+                    x-=clinic_stride;
+                }
+                else
+                {
+                    clinic = llListReplaceList(clinic,[timeout],x+2,x+2);
+                    encode_message(llList2String(clinic,x),["PleaseRespond","ClinicHealupReq"]);
+                }
+            }
+        }
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        process_message(m,i);
+    }
+}

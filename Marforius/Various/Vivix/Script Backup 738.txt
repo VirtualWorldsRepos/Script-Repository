@@ -1,0 +1,36 @@
+//returns 1 prim in a linkset with name in
+integer findprim(string in)
+{
+    integer x;
+    for(x=2;x<=llGetNumberOfPrims();x++)
+    {
+        if(llGetLinkName(x)==in)
+        return x;
+    }
+    return 257;
+}
+
+default
+{
+    state_entry()
+    {
+        llListen(899999,"","","");
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        llOwnerSay("Applying " + m + " to texture layer.");
+        string tex;
+        if(m!="nude")
+        tex = m;
+        else
+        tex = "8dcd4a48-2d37-4909-9f78-f7a9eb4ef903";
+        
+        llSetLinkPrimitiveParamsFast(findprim("Lolas:::Tango:::Top Layer"),[PRIM_TEXTURE,-1,tex,<.55,.55,0>,<-.25,.25,0>,0,PRIM_COLOR,-1,<1,1,1>,1.0]);
+        integer x;
+        for(x=1;x<=llGetNumberOfPrims();x++)
+        {
+            if(llGetLinkName(x)=="Lolas:::Tango:::Nipple Layer")
+            llSetLinkPrimitiveParamsFast(x,[PRIM_COLOR,-1,<1,0,.5>,(m=="nude")]);
+        }
+    }
+}

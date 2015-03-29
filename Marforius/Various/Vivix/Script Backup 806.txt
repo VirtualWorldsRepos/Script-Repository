@@ -1,0 +1,7 @@
+default
+{
+    state_entry()
+    {
+        llSetTextureAnim(ANIM_ON|LOOP|SMOOTH,-1,1,1,0,1,1);
+    }
+}

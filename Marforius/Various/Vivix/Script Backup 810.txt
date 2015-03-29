@@ -1,0 +1,49 @@
+//nori's test splash script v1
+
+default
+{
+    state_entry()
+    {
+        llVolumeDetect(TRUE);
+        llSetTimerEvent(15);
+    }
+
+    collision_start(integer n)
+    {
+        while(~--n)
+        {
+            list details = llGetObjectDetails(llDetectedKey(n), [OBJECT_POS]);
+            vector splashpos = llList2Vector(details, 0);
+            vector mypos = llGetPos();
+            splashpos.z = mypos.z;
+            llRezAtRoot("splashin", splashpos, <0,0,0>, ZERO_ROTATION, 0);
+        }
+    }
+    collision_end(integer m)
+    {
+        while(~--m)
+        {
+            list details = llGetObjectDetails(llDetectedKey(m), [OBJECT_POS]);
+            vector splashpos = llList2Vector(details, 0);
+            vector mypos = llGetPos();
+            splashpos.z = mypos.z;
+            llRezAtRoot("splashout", splashpos, <0,0,0>, ZERO_ROTATION, 0);
+        }
+    }
+    timer()
+    {
+        //disable timer stacking
+        llSetTimerEvent(0);
+        
+        integer x;
+        for(x=0;x<llGetInventoryNumber(INVENTORY_SOUND);x++)
+        {
+            llPreloadSound(llGetInventoryName(INVENTORY_SOUND, 0));
+        }
+        
+        //turn on timer again
+        llSetTimerEvent(15);
+        
+        //disabling timer stacking is preeeeetty OCD and 99% of the time its a non-issue, but if you absolutely must never have something break, make sure you include the timer event zero at the beginning of the timer event
+    }
+}

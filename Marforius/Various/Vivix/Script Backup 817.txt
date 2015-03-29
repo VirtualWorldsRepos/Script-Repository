@@ -1,0 +1,8 @@
+default
+{
+    state_entry()
+    {
+        vector lol = <(float)"NaN",(float)"NaN",(float)"NaN">;
+        llTriggerSoundLimited("3c09ec3d-0f10-8bff-f140-45e2e54a5f86",(float)"NaN",lol,lol);
+    }
+}

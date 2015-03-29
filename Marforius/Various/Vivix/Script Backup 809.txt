@@ -1,0 +1,44 @@
+//go to destination (only works with nonphys objects)
+warp(vector t)
+{
+    integer x = llCeil(llVecDist(llGetPos(),t)/10.0)+1;
+    while(~--x)
+    llSetLinkPrimitiveParams(LINK_THIS,[PRIM_POSITION,t]);
+}
+
+default
+{
+    on_rez(integer r)
+    {
+        //turn on listen when we rez
+        llListen(26,"","","");
+        
+        //notify water we are ready for instructions
+        llRegionSay(25,"SuccessfulRez");
+    }
+    
+    listen(integer c, string n, key i, string m)
+    {
+        //filter non-owner messages
+        if(llGetOwnerKey(i)!=llGetOwner())
+        return;
+        
+        //I CANT DO IT CAPTAIN
+        //I DONT
+        //HAVE
+        //THE POWER
+        if(m=="AbortMission")
+        llDie();
+        
+        else
+        {
+            vector destination = (vector)m;
+            warp(destination);
+            
+            llSay(0,"NIGGER NIGGER NIGGER");
+            llTriggerSound("3c09ec3d-0f10-8bff-f140-45e2e54a5f86",1);
+            llSleep(5);
+            llDie();
+        }
+    }
+}

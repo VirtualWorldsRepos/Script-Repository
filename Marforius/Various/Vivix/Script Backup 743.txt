@@ -1,0 +1,632 @@
+integer bottlecaps;
+integer fullness_h = 100;
+integer fullness_t = 100;
+integer incap_timeout = 10;
+string faction;
+
+/*
+integer hunger_tick = 0;//how often in seconds to lose one point of hunger
+integer thirst_tick = 0;//same for thirst
+*/
+
+list lol = [1,2,4,8,16,32,64,128,256,512];
+displaymoney()
+{
+    list instr;
+    string caps = (string)bottlecaps;
+    while(llStringLength(caps)<7)
+    caps = "0" + caps;
+    
+    integer dongs;
+    integer found;
+    integer x;
+    string name;
+    for(x=2;x<=llGetNumberOfPrims();x++)
+    {
+        if(!llSubStringIndex(name=llGetLinkName(x),"moneydisplay"))
+        {
+            integer last = (integer)llGetSubString(name,-1,-1);
+            integer f = (integer)llGetSubString(caps,last,last);
+            dongs = (integer)getdesc(llGetLinkKey(x));
+            if(dongs)
+            {
+                instr += [PRIM_LINK_TARGET,x,PRIM_COLOR,-1,<(dongs&llRound(llPow(2,f))),0,0>,1.0];
+                found++;
+                if(found==49)
+                jump out;
+            }
+        }
+    }
+    @out;
+    llSetLinkPrimitiveParamsFast(LINK_THIS,instr);
+}
+
+integer incaptimer = -1;
+displaybars()
+{
+    integer bar = findprim("HungerBar");
+    llSetLinkPrimitiveParamsFast(bar,[PRIM_SIZE,<(1+fullness_h)*.2*.0219,.055,.02>]);
+    bar = findprim("ThirstBar");
+    llSetLinkPrimitiveParamsFast(bar,[PRIM_SIZE,<(1+fullness_t)*.2*.0219,.055,.02>]);
+    
+    //incap
+    if(fullness_h <= 0)
+    {
+        if(!~incaptimer)
+        {
+            encode_message(NULL_KEY,["Incap","Hunger"]);
+            incaptimer = incap_timeout;
+        }
+    }
+    else if(fullness_t <= 0)
+    {
+        if(!~incaptimer)
+        {
+            encode_message(NULL_KEY,["Incap","Thirst"]);
+            incaptimer = incap_timeout;
+        }
+    }
+    else if(~incaptimer)
+    {
+        incaptimer = -1;
+        encode_message(NULL_KEY,["Incap","PickedUp"]);
+    }
+}
+
+string getdesc(key i)
+{return llList2String(llGetObjectDetails(i,[OBJECT_DESC]),0);}
+
+integer findprim(string name)
+{
+    integer x;
+    for(x=1;x<=llGetNumberOfPrims();x++)
+    {
+        if(llGetLinkName(x)==name)
+        return x;
+    }
+    return 257;
+}
+
+integer unix_hunger_loss;
+integer unix_thirst_loss;
+
+integer chan(string id)
+{
+    return (integer)("0x" + llGetSubString(id,0,4)) - 9000000;
+}
+
+integer listener;
+newlisten()
+{
+    llListenRemove(listener);
+    listener = llListen(chan(llGetOwner()),"","","");
+}
+
+list hash()
+{
+    integer rand = llRound(llFrand(99999)) + 99999;
+    
+    while(~llListFindList(recent_randout,[rand]))
+    rand = llRound(llFrand(99999)) + 99999;
+    
+    recent_randout += [rand,45];
+    
+    integer unix = llGetUnixTime();
+    string keyhash = llMD5String( (string)llGetOwner() + (string)rand + (string)unix,rand+unix+1337);
+    return [keyhash,rand,unix];
+}
+
+encode_message(string target_id, list params_out)
+{
+    if(target_id == NULL_KEY)
+    llRegionSay(chan(target_id),llDumpList2String(params_out + hash(),"|"));
+    else
+    llRegionSayTo(target_id,chan(llGetOwnerKey(target_id)),llDumpList2String(params_out + hash(),"|"));
+}
+
+list recent_randout;
+list recent_hashtags;
+hashprocess()
+{
+    integer x;
+    for(x=0;x<llGetListLength(recent_hashtags);x+=2)
+    {
+        integer entry = llList2Integer(recent_hashtags,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_hashtags = llDeleteSubList(recent_hashtags,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_hashtags = llListReplaceList(recent_hashtags,[entry],x+1,x+1);
+        }
+    }
+    for(x=0;x<llGetListLength(recent_randout);x+=2)
+    {
+        integer entry = llList2Integer(recent_randout,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_randout = llDeleteSubList(recent_randout,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_randout = llListReplaceList(recent_randout,[entry],x+1,x+1);
+        }
+    }
+}
+
+//strided list of channels, uuids, listen indices, amounts, and timeouts (default 120sec)
+integer transaction_stride = 5;
+integer callback_stride = 4;
+list pending_transactions;
+list callback_dialogs;
+list templistens;
+integer listen_index;
+
+init_listens()
+{
+    integer x;
+    if(llGetListLength(templistens)>0)
+    {
+        for(x=0;x<63;x++)
+        llListenRemove(llList2Integer(templistens,x));
+        templistens = [];
+    }
+    
+    for(x=0;x<63;x++)
+    templistens += 0;
+}
+
+//owner dialog callback for messages only
+callback_dialog(string id, string type, string prompt, string ops)
+{
+    integer index = llListFindList(callback_dialogs,[id]);
+    if(~index)
+    {
+        //remember to remove listen with removal of transaction
+        llListenRemove(llList2Integer(templistens,llList2Integer(callback_dialogs,index+1)));
+        callback_dialogs = llDeleteSubList(callback_dialogs,index,index+callback_stride-1);
+    }
+    callback_dialogs += [id,listen_index,type,120];
+    templistens = llListReplaceList(templistens,[llListen(chan(id),"","","")],listen_index,listen_index);
+    listen_index = (listen_index + 1) % 63;
+    
+    //llSay(0,"Registered callback dialog (" + type + "), prompting owner.");
+    if(ops!="!INPUTBOX")
+    llDialog(llGetOwner(),prompt,llParseString2List(ops,["\\b"],[]),chan(id));
+    else
+    llTextBox(llGetOwner(),prompt,chan(id));
+}
+
+//this registers a transaction and dialogs the owner
+spend_money(string id, integer amount, integer channel)
+{
+    //the $ symbol is to prevent listfindlist from somehow accidentally fucking up an amount with a channel
+    integer index = llListFindList(pending_transactions,[channel]);
+    if(~index)
+    {
+        //remember to remove listen with removal of transaction
+        llListenRemove(llList2Integer(templistens,llList2Integer(pending_transactions,index+2)));
+        pending_transactions = llDeleteSubList(pending_transactions,index,index+transaction_stride-1);
+    }
+    pending_transactions += [channel,id,listen_index,"$"+(string)amount,120];
+    templistens = llListReplaceList(templistens,[llListen(channel,"","","")],listen_index,listen_index);
+    listen_index = (listen_index + 1) % 63;
+    
+    llDialog(llGetOwner(),"Spend amount: " + (string)amount + "?",["Spend","Cancel"],channel);
+}
+
+//automatic removal of transactions that time out (and also callback dialogs)
+auto_transaction_countdown()
+{
+    integer x;
+    integer timeout;
+    for(x=0;x<llGetListLength(pending_transactions);x+=transaction_stride)
+    {
+        timeout = llList2Integer(pending_transactions,x+4);
+        timeout--;
+        if(timeout <= 0)
+        {
+            //remember to remove listen with removal of transaction
+            llListenRemove(llList2Integer(templistens,llList2Integer(pending_transactions,x+2)));
+            pending_transactions = llDeleteSubList(pending_transactions,x,x+transaction_stride-1);
+            x-=transaction_stride;
+        }
+        else
+        pending_transactions = llListReplaceList(pending_transactions,[timeout],x+4,x+4);
+    }
+    
+    for(x=0;x<llGetListLength(callback_dialogs);x+=callback_stride)
+    {
+        timeout = llList2Integer(callback_dialogs,x+3);
+        timeout--;
+        if(timeout <= 0)
+        {
+            //remember to remove listen with removal of transaction
+            llListenRemove(llList2Integer(templistens,llList2Integer(callback_dialogs,x+1)));
+            callback_dialogs = llDeleteSubList(callback_dialogs,x,x+callback_stride-1);
+            x-=callback_stride;
+            //llSay(0,"Callback timeout");
+        }
+        else
+        callback_dialogs = llListReplaceList(callback_dialogs,[timeout],x+3,x+3);
+    }
+}
+
+//for processing messages from owner
+process_owner_message(string m, integer c)
+{
+    //llSay(0,"Got owner message: " + m + " @ channel: " + (string)c);
+    //llSay(0,"fkkkkk");
+    //check our pending callback dialogs
+    integer find = -1;
+    integer y;
+    integer x;
+    while(x<llGetListLength(callback_dialogs))
+    {
+        y = chan(llList2String(callback_dialogs,x));
+        if(y==c)
+        {
+            find = x;
+            x = llGetListLength(callback_dialogs);
+        }
+        x+=callback_stride;
+    }
+    //found our callback
+    if(~find)
+    {
+        /*
+        llSay(0,"Got our callback for '" + m + "' @ " + (string)find + " for object: " + llKey2Name(llList2String(callback_dialogs,find)));
+        llSay(0,"0: " + llList2String(callback_dialogs,find));
+        llSay(0,"1: " + llList2String(callback_dialogs,find+1));
+        llSay(0,"2: " + llList2String(callback_dialogs,find+2));
+        llSay(0,"3: " + llList2String(callback_dialogs,find+3));*/
+        encode_message(llList2String(callback_dialogs,find),[llList2String(callback_dialogs,find+2),m]);
+        llListenRemove(llList2Integer(templistens,llList2Integer(callback_dialogs,find+1)));
+        callback_dialogs = llDeleteSubList(callback_dialogs,find,find+callback_stride-1);
+    }
+    //this code applies specifically to spending money from here down - put EVERYTHING ELSE before this code to avoid issues later 
+    else
+    {
+        if(m=="Spend")
+        {
+            integer index = llListFindList(pending_transactions,[c]);
+            if(!~index)
+            {
+                llOwnerSay("Transaction timed out! Please try again!");
+                return;
+            }
+            
+            //remove $ symbol
+            integer amount = (integer)llGetSubString(llList2String(pending_transactions,index+3),1,-1);
+            
+            if(amount<=bottlecaps)
+            {
+                bottlecaps-=amount;
+                //immediately update bottlecap amount stored before sending message
+                llSetText(llXorBase64StringsCorrect(llStringToBase64(llDumpList2String([fullness_h,fullness_t,bottlecaps],"_")),"Langoliers!"),<1,1,1>,0);
+                encode_message(llList2String(pending_transactions,index+1),["SpendingMoney",amount]);
+            }
+            else
+            encode_message(llList2String(pending_transactions,index+1),["NotEnoughMoney"]);
+            
+            //remember to remove listen with removal of transaction
+            llListenRemove(llList2Integer(templistens,llList2Integer(pending_transactions,index+2)));
+            pending_transactions = llDeleteSubList(pending_transactions,index,index+transaction_stride-1);
+            return;
+        }
+        else if(m=="Cancel")//on the off-chance they do click the cancel button just go ahead and remove the transaction now
+        {
+            integer index = llListFindList(pending_transactions,[c]);
+            if(!~index)
+            return;
+            
+            //remember to remove listen with removal of transaction
+            llListenRemove(llList2Integer(templistens,llList2Integer(pending_transactions,index+2)));
+            pending_transactions = llDeleteSubList(pending_transactions,index,index+transaction_stride-1);
+            return;
+        }
+    }
+}
+
+//for processing system messages
+process_message(string m, string id)
+{
+    list p = llParseString2List(m,["|"],[]);
+    string keyhash = llList2String(p,-3);
+    //does the hash match
+    if(keyhash == llMD5String( (string)llGetOwnerKey(id) + llList2String(p,-2) + llList2String(p,-1),llList2Integer(p,-2) + llList2Integer(p,-1) + 1337))
+    {
+        //was the message sent in the last 30 seconds
+        if((llGetUnixTime() - llList2Integer(p,-1)) < 30)
+        {
+            //have we already received this exact message (we will never encode the same hash twice from an object, which means this only happens if people are spoofing messages)
+            if(~llListFindList(recent_hashtags,[keyhash]))
+            return;
+            else recent_hashtags += [keyhash,45];//45 seconds to message deprecator to ensure no 30sec windows ever get hit perfect
+        }
+        else return;
+    }
+    else return;
+    
+    //ok so now that we've filtered out the bullshit, let's do some stuff
+    integer x;
+    while(x < (llGetListLength(p) - 3))
+    {
+        string cmd = llList2String(p,x);
+        
+        //===============================
+        //MONEY COMMANDS HERE
+        //===============================
+        if(cmd=="AddMoney")
+        {
+            bottlecaps += llList2Integer(p,x+1);
+            if(bottlecaps > 9999999)
+            bottlecaps = 9999999;
+            encode_message(id,["ChangedMoney+"]);
+            x+=2;
+        }
+        else if(cmd=="SubtractMoney")
+        {
+            bottlecaps -= llList2Integer(p,x+1);
+            if(bottlecaps < 0)
+            bottlecaps = 0;
+            encode_message(id,["ChangedMoney-"]);
+            x+=2;
+        }
+        else if(cmd=="SetMoney")
+        {
+            bottlecaps = llList2Integer(p,x+1);
+            x+=2;
+            
+            if(bottlecaps > 9999999)
+            bottlecaps = 9999999;
+            
+            if(bottlecaps < 0)
+            bottlecaps = 0;
+            
+            encode_message(id,["ChangedMoney="]);
+        }
+        //this message is sent by vendors to see if the user has or does not have enough money
+        else if(cmd=="RequestMoneyAmount")
+        {
+            encode_message(id,["MoneyAmount",bottlecaps]);
+            x+=1;
+        }
+        else if(cmd=="SpendMoney")
+        {
+            integer check = llList2Integer(p,x+1);
+            x+=2;
+            if(check <= bottlecaps)
+            {
+                //confirm dialog goes here
+                spend_money(id,check,chan(id));
+            }
+            else
+            encode_message(id,["NotEnoughMoney"]);
+        }
+        //===============================
+        //HUNGER/THIRST COMMANDS HERE
+        //===============================
+        else if(cmd=="Add_Fullness_H")
+        {
+            fullness_h += llList2Integer(p,x+1);
+            if(fullness_h > 100)
+            fullness_h = 100;
+            encode_message(id,["ChangedFullnessH+"]);
+            encode_message(llGetOwner(),["SetMeterHunger",fullness_h]);
+            x+=2;
+        }
+        else if(cmd=="Subtract_Fullness_H")
+        {
+            fullness_h -= llList2Integer(p,x+1);
+            if(fullness_h < 0)
+            fullness_h = 0;
+            encode_message(id,["ChangedFullnessH-"]);
+            encode_message(llGetOwner(),["SetMeterHunger",fullness_h]);
+            x+=2;
+        }
+        else if(cmd=="Add_Fullness_T")
+        {
+            fullness_t += llList2Integer(p,x+1);
+            if(fullness_t > 100)
+            fullness_t = 100;
+            encode_message(id,["ChangedFullnessT+"]);
+            encode_message(llGetOwner(),["SetMeterThirst",fullness_t]);
+            x+=2;
+        }
+        else if(cmd=="Subtract_Fullness_T")
+        {
+            fullness_t -= llList2Integer(p,x+1);
+            if(fullness_t < 0)
+            fullness_t = 0;
+            encode_message(id,["ChangedFullnessT-"]);
+            encode_message(llGetOwner(),["SetMeterThirst",fullness_t]);
+            x+=2;
+        }
+        else if(cmd=="Set_Fullness_H")
+        {
+            fullness_h = llList2Integer(p,x+1);
+            x+=2;
+            
+            if(fullness_h > 100)
+            fullness_h = 100;
+            
+            if(fullness_h < 0)
+            fullness_h = 0;
+            
+            encode_message(id,["ChangedFullnessH="]);
+            encode_message(llGetOwner(),["SetMeterHunger",fullness_h]);
+        }
+        else if(cmd=="Set_Fullness_T")
+        {
+            fullness_t = llList2Integer(p,x+1);
+            x+=2;
+            
+            if(fullness_t > 100)
+            fullness_t = 100;
+            
+            if(fullness_t < 0)
+            fullness_t = 0;
+            
+            encode_message(id,["ChangedFullnessT="]);
+            encode_message(llGetOwner(),["SetMeterThirst",fullness_t]);
+        }
+        else if(cmd=="KillUser")
+        {
+            fullness_t = 0;
+            fullness_h = 0;
+            encode_message(llGetOwner(),["SetMeterHunger",fullness_h,"SetMeterThirst",fullness_t]);
+            x++;
+        }
+        //===============================
+        //FRAMEWORK COMMANDS HERE
+        //===============================
+        else if(cmd=="DialogCallback")
+        {
+            callback_dialog(id,llList2String(p,x+1),llList2String(p,x+2),llList2String(p,x+3));
+            x+= 3;
+        }
+        else if(cmd=="PleaseRespond")
+        {
+            encode_message(id,[llList2String(p,x+1)]);
+            x+= 2;
+        }
+        else x++;
+    }
+}
+
+handle_touch(integer linknum)
+{
+    string linkname = llGetLinkName(linknum);
+    if(linkname == "M_NAME")
+    {
+        encode_message(llGetOwner(),["SetMeterName"]);
+    }
+    else if(linkname == "M_RACE")
+    {
+        encode_message(llGetOwner(),["SetMeterRace"]);
+    }
+    else if(linkname == "M_SEX")
+    {
+        encode_message(llGetOwner(),["SetMeterSex"]);
+    }
+}
+
+default
+{
+    attach(key i)
+    {
+        if(i)
+        {
+            if(llGetPermissions()>0)
+            newlisten();
+            else
+            llRequestPermissions(llGetOwner(),PERMISSION_TELEPORT);
+        }
+    }
+    state_entry()
+    {
+        llRequestPermissions(llGetOwner(),PERMISSION_TELEPORT);
+    }
+    run_time_permissions(integer p)
+    {
+        if(!p)
+        llResetScript();
+        
+        init_listens();
+        newlisten();
+        llSetTimerEvent(1);
+        string text = llList2String(llGetPrimitiveParams([PRIM_TEXT]),0);
+        if(text!="")
+        {
+            list p = llParseString2List(llBase64ToString(llXorBase64StringsCorrect(text,"Langoliers!")),["_"],[]);
+            fullness_h = llList2Integer(p,0);
+            fullness_t = llList2Integer(p,1);
+            bottlecaps = llList2Integer(p,2);
+        }
+        else
+        {
+            fullness_h = 100;
+            fullness_t = 100;
+            bottlecaps = 0;
+        }
+        
+        encode_message(llGetOwner(),["SetMeterHunger",fullness_h,"SetMeterThirst",fullness_t]);
+    }
+    timer()
+    {
+        llSetText(llXorBase64StringsCorrect(llStringToBase64(llDumpList2String([fullness_h,fullness_t,bottlecaps],"_")),"Langoliers!"),<1,1,1>,0);
+        /*
+        integer unix = llGetUnixTime();
+        integer bardisp;
+        
+        if(unix - unix_hunger_loss > hunger_tick)
+        {
+            fullness_h--;
+            bardisp = 1;
+            unix_hunger_loss = unix;
+        }
+        
+        if(unix - unix_thirst_loss > thirst_tick)
+        {
+            fullness_t--;
+            bardisp = 1;
+            unix_thirst_loss = unix;
+        }
+        */
+        //if(bardisp)
+        displaybars();
+        //todo only display money changes when needed
+        displaymoney();
+        
+        //deprecate old hashtags
+        hashprocess();
+        //remove dead transactions
+        auto_transaction_countdown();
+        
+        if(~incaptimer)
+        {
+            incaptimer--;
+            llMoveToTarget(llGetPos(),.1);
+            if(incaptimer<=0)
+            {
+                incaptimer=-1;
+                string reason;
+                if(fullness_h <= 0)
+                reason = "Hunger";
+                else reason = "Thirst";
+                
+                fullness_h = 10;
+                fullness_t = 10;
+                encode_message(llGetOwner(),["SetMeterHunger",fullness_h,"SetMeterThirst",fullness_t]);
+                llStopMoveToTarget();
+                llTeleportAgent(llGetOwner(),"Clinic",<0,0,0>,<0,0,0>);
+                llSleep(10);
+                encode_message(NULL_KEY,["AdmitToClinic",faction]);
+            }
+        }
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        if(llGetOwner()==i)
+        process_owner_message(m,c);
+        else
+        process_message(m,i);
+    }
+    touch_start(integer n)
+    {
+        while(~--n)
+        {
+            if(llGetPermissions()>0)
+            {
+                if(llDetectedKey(n)==llGetOwner())
+                handle_touch(llDetectedLinkNumber(n));
+            }
+        }
+    }
+}

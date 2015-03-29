@@ -1,0 +1,32 @@
+list colors =
+[
+    <1,0,0>,
+    <1,.5,0>,
+    <1,1,0>,
+    <.5,1,0>,
+    <0,1,0>,
+    <0,1,.5>,
+    <0,1,1>,
+    <0,.5,1>,
+    <0,0,1>,
+    <.5,0,1>,
+    <1,0,1>,
+    <1,0,.5>
+];
+
+default
+{
+    on_rez(integer r)
+    {
+        //will be rezzed with value of 1 through 12
+        if(r)
+        {
+            llSetColor(llList2Vector(colors,r-1),ALL_SIDES);
+            llSetTimerEvent(5);
+        }
+    }
+    timer()
+    {
+        llDie();
+    }
+}

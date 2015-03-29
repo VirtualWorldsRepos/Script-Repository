@@ -1,0 +1,11 @@
+default
+{
+    touch_start(integer n)
+    {
+        while(~--n)
+        {
+            if(llDetectedKey(n)==llGetOwner())
+            llRezObject(llGetInventoryName(INVENTORY_OBJECT,0),llGetPos()+llRot2Fwd(llGetRot()),llGetVel(),llGetRot(),1);
+        }
+    }
+}

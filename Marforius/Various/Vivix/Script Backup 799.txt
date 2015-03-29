@@ -1,0 +1,132 @@
+//PONY FALLOUT 10 BOTTLECAPS GIVER
+
+list hash()
+{
+    integer rand = llRound(llFrand(99999)) + 99999;
+    
+    while(~llListFindList(recent_randout,[rand]))
+    rand = llRound(llFrand(99999)) + 99999;
+    
+    recent_randout += [rand,45];
+    
+    integer unix = llGetUnixTime();
+    string keyhash = llMD5String( (string)llGetOwner() + (string)rand + (string)unix,rand+unix+1337);
+    return [keyhash,rand,unix];
+}
+
+encode_message(string target_id, list params_out)
+{
+    if(target_id == NULL_KEY)
+    llRegionSay(chan(target_id),llDumpList2String(params_out + hash(),"|"));
+    else
+    llRegionSayTo(target_id,chan(llGetOwnerKey(target_id)),llDumpList2String(params_out + hash(),"|"));
+}
+
+list recent_randout;
+list recent_hashtags;
+hashprocess()
+{
+    integer x;
+    for(x=0;x<llGetListLength(recent_hashtags);x+=2)
+    {
+        integer entry = llList2Integer(recent_hashtags,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_hashtags = llDeleteSubList(recent_hashtags,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_hashtags = llListReplaceList(recent_hashtags,[entry],x+1,x+1);
+        }
+    }
+    for(x=0;x<llGetListLength(recent_randout);x+=2)
+    {
+        integer entry = llList2Integer(recent_randout,x+1);
+        entry--;
+        if(entry<0)
+        {
+            recent_randout = llDeleteSubList(recent_randout,x,x+1);
+            x-=2;
+        }
+        else
+        {
+            recent_randout = llListReplaceList(recent_randout,[entry],x+1,x+1);
+        }
+    }
+}
+
+process_message(string m, string id)
+{
+    list p = llParseString2List(m,["|"],[]);
+    string keyhash = llList2String(p,-3);
+    //does the hash match
+    if(keyhash == llMD5String( (string)llGetOwnerKey(id) + llList2String(p,-2) + llList2String(p,-1),llList2Integer(p,-2) + llList2Integer(p,-1) + 1337))
+    {
+        //was the message sent in the last 30 seconds
+        if((llGetUnixTime() - llList2Integer(p,-1)) < 30)
+        {
+            //have we already received this exact message (we will never encode the same hash twice from an object, which means this only happens if people are spoofing messages)
+            if(~llListFindList(recent_hashtags,[keyhash]))
+            return;
+            else recent_hashtags += [keyhash,45];//45 seconds to message deprecator to ensure no 30sec windows ever get hit perfect
+        }
+        else return;
+    }
+    else return;
+    
+    //ok so now that we've filtered out the bullshit, let's do some stuff
+    integer x;
+    while(x < (llGetListLength(p) - 3))
+    {
+        string cmd = llList2String(p,x);
+        if(cmd=="UNUSED")
+        {
+            x++;
+        }
+        else x++;
+    }
+}
+
+integer chan(string id)
+{
+    return (integer)("0x" + llGetSubString(id,0,4)) - 9000000;
+}
+
+integer listener;
+newlisten()
+{
+    llListenRemove(listener);
+    listener = llListen(chan(llGetOwner()),"","","");
+}
+
+default
+{
+    on_rez(integer r)
+    {
+        newlisten();
+    }
+    state_entry()
+    {
+        llSetText("Drains health, adds money",<0,1,0>,1);
+        newlisten();
+        llSetTimerEvent(1);
+        llSensorRepeat("","",AGENT,3,PI,1);
+    }
+    timer()
+    {
+        hashprocess();
+    }
+    sensor(integer n)
+    {
+        while(~--n)
+        {
+            encode_message(llDetectedKey(n),["AddMoney",1,"Subtract_Fullness_H",1,"Subtract_Fullness_T",1]);
+        }
+    }
+    listen(integer c, string n, key i, string m)
+    {
+        process_message(m,i);
+    }
+}

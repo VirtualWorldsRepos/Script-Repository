@@ -1,0 +1,13 @@
+integer fuck;
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(1);
+    }
+    timer()
+    {
+        fuck = (fuck + 1) % 10;
+        llSetText((string)fuck,<0,1,1>,1);
+    }
+}

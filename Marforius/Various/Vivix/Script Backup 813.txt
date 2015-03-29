@@ -1,0 +1,19 @@
+integer fuck;
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(1);
+    }
+    timer()
+    {
+        fuck++;
+        llSetText
+        (
+            (string)fuck + 
+            "\n" + 
+            (string)(fuck % 10) +
+            "\n" + 
+            (string)fuck + " Divided by 10 = " + (string)llFloor((float)fuck/10.0) + " with remainder: " + (string)(fuck % 10) ,<0,1,1>,1);
+    }
+}

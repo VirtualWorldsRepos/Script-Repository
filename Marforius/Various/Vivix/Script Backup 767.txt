@@ -1,0 +1,88 @@
+string notereq;
+integer curnoteindex;
+string curnotename;
+integer curnotetotallines;
+integer curnoteline;
+
+reboot()
+{
+    llOwnerSay("Starting up! Please stand by while I load my configuration files!");
+    
+    curnoteindex=0;
+    curnoteline=-1;
+    curnotetotallines=0;
+    curnotename=llGetInventoryName(INVENTORY_NOTECARD,curnoteindex);
+    notereq = llGetNumberOfNotecardLines(curnotename);
+    configloadbar();
+}
+
+nextline()
+{
+    curnoteline++;
+    notereq = llGetNotecardLine(curnotename,curnoteline);
+    configloadbar();
+}
+
+configloadbar()
+{
+    string numlines = (string)curnotetotallines;
+    if(numlines=="0")
+    numlines = "?";
+    
+    llSetText("Loading config...\n"+curnotename+"\nCurrent Note: " + curnotename + "\nLine: " + (string)curnoteline + " / " + numlines,<0,1,1>,1);
+}
+//single line of data gets processed here
+parsedata(string d)
+{
+    llSay(0,d);
+}
+
+//notecard line info gets processed here
+parsenotedata(string d)
+{
+    if(d==EOF)
+    {
+        //next note
+        curnoteindex++;
+        if((curnotename=llGetInventoryName(INVENTORY_NOTECARD,curnoteindex))!="")
+        {
+            curnoteline=-1;
+            curnotetotallines=0;
+            notereq = llGetNumberOfNotecardLines(curnotename);
+            configloadbar();
+        }
+        else
+        {
+            llSetText("",<0,0,0>,0);
+            llSetTimerEvent(.01);
+        }
+    }
+    else
+    {
+        if(curnotetotallines<=0)
+        curnotetotallines=(integer)d;
+        else
+        parsedata(d);
+        
+        nextline();
+    }
+}
+
+default
+{
+    on_rez(integer r)
+    {
+        reboot();
+    }
+    state_entry()
+    {
+        reboot();
+    }
+    dataserver(key i, string d)
+    {
+        if(notereq!=(string)i)
+        return;
+        
+        parsenotedata(d);
+    }
+}
