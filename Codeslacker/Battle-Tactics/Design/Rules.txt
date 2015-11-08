@@ -1,0 +1,6 @@
+RULES
+=============================================
+
+- Soldiers are the only class capable of capturing
+- Players must hold the capture point for a set time limit in order to win the game
+- Players can't build too close to the center of the field unless they captured it

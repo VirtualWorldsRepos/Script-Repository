@@ -1,0 +1,21 @@
+CONFIGURATION SETTINGS LIST
+=============================================
+This file lists all of the configuration settings available
+
+a) Freeplay
+b) Price
+c) Pay out
+	1) Pay out to winners
+	2) Pay out to ALL winners
+	3) Initial Pot
+e) Refineries
+	1) Number of refineries
+	2) Money per refinery
+	3) Money interval
+	4) Initial money
+f) Factories
+	1) Max number of factories
+g) Time (repesented in minutes)
+	1) Time limit
+	2) Capture time until win
+	3) Join time out (amount of time to wait for players to be ready, start the game without them)

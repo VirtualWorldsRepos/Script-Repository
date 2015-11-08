@@ -1,0 +1,12 @@
+SCRIPTS
+=============================================
+This file lists all of the scripts and their purposes.
+
+a) Server
+	1) Core:			Adds/Removes people from teams, tells the join scripts when people can join, tells debit script the price to join, starts a game, handles global server messages, communicates to HUDs
+	2) Config:			Loads data from the configuration notecard and relays it to other scripts
+	3) Join Red/Blue:	Scripts used for allowing people to join the game
+	4) Debit:			Handles setting the pay price, refunds and paying out to winners
+	5) Board:			Keeps track of capture data and determines the winner
+	6) Menu:			Menu buttons script
+	7) IM/Items:		Instant message scripts (separate because it sleeps the script for 2 seconds)

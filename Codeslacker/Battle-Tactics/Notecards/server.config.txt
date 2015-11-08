@@ -1,0 +1,40 @@
+# BATTLE TACTICS CONFIGURATION NOTECARD
+# NOTES: - All blank lines or lines starting with a pound sign (#) are ignored by the configuration script
+#             - True or false settings can accept the values "ON", "TRUE", "1" or "OFF", "FALSE", and "0"
+
+# freeplay option
+CONFIG_FREEPLAY = ON
+
+# price to pay if freeplay is off
+CONFIG_PRICE = 1
+
+# payout to winners
+CONFIG_PAYOUT = ON
+
+# initial pot to start each game off
+CONFIG_INITIAL_POT = 0
+
+# number of refineries on a team
+CONFIG_REF_NUM = 2
+
+# amount of money each refinery gives players on an interval
+CONFIG_REF_AMOUNT = 5
+
+# interval for money (in seconds)
+CONFIG_REF_INTERVAL = 1
+
+# initial amount of money each player starts off with
+CONFIG_INITIAL_MONEY = 150
+
+# maximum number of factories per player
+CONFIG_MAX_FACTORIES = 3
+
+# TIME OPTIONS (represented in minutes)
+# time limit option (0 for no time limit)
+CONFIG_TIME_LIMIT = 10
+
+# amount of time teams need to hold the capture point to win
+CONFIG_TIME_CAPTURE = 2.5
+
+# minutes to wait for players to join
+CONFIG_TIMEOUT_JOIN = 5

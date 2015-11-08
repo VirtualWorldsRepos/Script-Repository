@@ -1,0 +1,30 @@
+CLASSES
+=============================================
+
+Players
+
+Structures
+	- Factories
+	- Tank Factory
+		- Tanks (mid-range anti-soldier/anti-barracks)
+	- Airbase (Creates/Refuels bomber planes)
+		- Bomber planes (anti-structures)
+	- Refineries
+	- Barracks 
+		- Soldiers (only class capable of capturing)
+	- Sniper Towers 
+		- Sniper (long range anti-soldier)
+				
+				
+Weapons
+	- Anti-tank Mines
+	- Flak Guns (anti-aircraft)
+				
+				
+Vehicles
+	- Single Tank (cheaper than factory)
+							
+							
+Unbuildable
+	- Refineries
+	- Players

@@ -1,0 +1,76 @@
+COMMUNICATIONS LIST
+=============================================
+
+a) Link Message Numbers
+	1) Global Messages	= 0
+	2) Config 			= 1
+	3) Join 			= 2
+	4) Debit			= 3
+	5) Board			= 4
+	6) Menu				= 5
+	7) IM				= 6
+	8) Items			= 7
+	9) Player			= 8
+	
+	
+	Core to Config
+	> Request settings
+	
+	Core to Join
+	> Enable/Disable joining
+	> Update Text
+	> Clear text
+	
+	Core to Debit
+	> Refunds
+	> Payout
+	> Show/Hide price
+	
+	Core to IM/Items
+	> IM message
+	> Item message
+	
+	Config to Core
+	> Data
+	
+	Config to Board
+	> Time data
+	
+	Config to Debit/Join
+	> Freeplay, Pay Price
+	
+	Join to Debit
+	> Refunds
+	
+	Join to Core
+	> Tell who is attempting to join
+	
+	Debit to Join
+	> No perms
+	
+	Menu to Core
+	> Button pressed
+
+	Player to Move
+	> Relay player key
+
+
+b) Channels
+	1) Global Messages			= -9454200
+	2) Admin Messages			= -9454201
+	3) Player Messages			= -9454202
+	4) Attack Messages			= -9454203
+	5) Repair Messages			= -9454204
+	
+	
+	Server to All
+	> Kill message
+	
+	Server to Player
+	> Relay player key, money interval, max factories, refinery amount, number of refineries, player team
+	
+	Player to Object
+	> Tell object to repair
+	
+	Object to Object
+	> Attack
